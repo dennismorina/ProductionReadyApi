@@ -20,18 +20,18 @@ public sealed class ProductsEndpointsTests(ApiFactory factory)
             42.50m,
             3);
 
-        var createResponse = await _client.PostAsJsonAsync("/api/products", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/api/products", createRequest, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var created = await createResponse.Content.ReadFromJsonAsync<ProductDto>();
+        var created = await createResponse.Content.ReadFromJsonAsync<ProductDto>(TestContext.Current.CancellationToken);
         Assert.NotNull(created);
         Assert.Equal(sku.ToUpperInvariant(), created.Sku);
 
-        var getResponse = await _client.GetAsync($"/api/products/{created.Id}");
+        var getResponse = await _client.GetAsync($"/api/products/{created.Id}", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
 
-        var fetched = await getResponse.Content.ReadFromJsonAsync<ProductDto>();
+        var fetched = await getResponse.Content.ReadFromJsonAsync<ProductDto>(TestContext.Current.CancellationToken);
         Assert.NotNull(fetched);
         Assert.Equal(created.Id, fetched.Id);
     }
@@ -45,7 +45,7 @@ public sealed class ProductsEndpointsTests(ApiFactory factory)
             -1m,
             -1);
 
-        var response = await _client.PostAsJsonAsync("/api/products", request);
+        var response = await _client.PostAsJsonAsync("/api/products", request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -60,12 +60,12 @@ public sealed class ProductsEndpointsTests(ApiFactory factory)
             10m,
             1);
 
-        var firstResponse = await _client.PostAsJsonAsync("/api/products", request);
+        var firstResponse = await _client.PostAsJsonAsync("/api/products", request, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
         var duplicateResponse = await _client.PostAsJsonAsync(
             "/api/products",
-            request with { Name = "Duplicate Product" });
+            request with { Name = "Duplicate Product" }, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
     }
@@ -78,19 +78,19 @@ public sealed class ProductsEndpointsTests(ApiFactory factory)
 
         await _client.PostAsJsonAsync(
             "/api/products",
-            new CreateProductRequest($"A-{token}", $"Keyboard {token}", 100m, 1));
+            new CreateProductRequest($"A-{token}", $"Keyboard {token}", 100m, 1), TestContext.Current.CancellationToken);
 
         await _client.PostAsJsonAsync(
             "/api/products",
-            new CreateProductRequest($"B-{token}", $"Keyboard Pro {token}", 150m, 2));
+            new CreateProductRequest($"B-{token}", $"Keyboard Pro {token}", 150m, 2), TestContext.Current.CancellationToken);
 
         var response = await _client.GetAsync(
-            $"/api/products?search={token.ToLowerInvariant()}&page=1&pageSize=1");
+            $"/api/products?search={token.ToLowerInvariant()}&page=1&pageSize=1", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<
-            ProductionReadyApi.Application.Common.PagedResult<ProductDto>>();
+            ProductionReadyApi.Application.Common.PagedResult<ProductDto>>(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(2, result.TotalCount);
@@ -103,7 +103,7 @@ public sealed class ProductsEndpointsTests(ApiFactory factory)
     [Fact]
     public async Task Health_ReturnsOk()
     {
-        var response = await _client.GetAsync("/health");
+        var response = await _client.GetAsync("/health", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
