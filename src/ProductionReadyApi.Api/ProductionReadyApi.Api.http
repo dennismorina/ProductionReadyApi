@@ -1,0 +1,21 @@
+@host = http://localhost:8080
+
+### Health
+GET {{host}}/health
+
+### OpenAPI
+GET {{host}}/openapi/v1.json
+
+### Create product
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "sku": "KB-001",
+  "name": "Mechanical Keyboard",
+  "price": 129.90,
+  "stockQuantity": 25
+}
+
+### Get products
+GET {{host}}/api/products?page=1&pageSize=20
