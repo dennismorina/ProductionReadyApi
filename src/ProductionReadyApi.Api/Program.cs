@@ -4,6 +4,7 @@ using ProductionReadyApi.Application;
 using ProductionReadyApi.Infrastructure;
 using ProductionReadyApi.Infrastructure.Health;
 using ProductionReadyApi.Infrastructure.Persistence;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,10 @@ var app = builder.Build();
 app.UseExceptionHandler();
 
 app.MapOpenApi();
+if (app.Environment.IsDevelopment())
+{
+    app.MapScalarApiReference();
+}
 app.MapControllers();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
