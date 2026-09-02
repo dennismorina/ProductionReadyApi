@@ -33,14 +33,16 @@ jobs:
           --configuration Release
           --no-restore
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: >
-          dotnet test ProductionReadyApi.sln
+          dotnet test
+          --solution ProductionReadyApi.sln
           --configuration Release
           --no-build
-          --logger "trx"
           --results-directory ./TestResults
-          --collect:"XPlat Code Coverage"
+          --coverlet
+          --coverlet-output-format cobertura
+          --minimum-expected-tests 1
 
       - name: Upload test results
         if: always()
