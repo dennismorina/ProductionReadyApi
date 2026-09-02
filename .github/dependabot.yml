@@ -1,8 +1,6 @@
 version: 2
 
 updates:
-
-  # NuGet packages
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
@@ -10,7 +8,6 @@ updates:
       day: "monday"
     open-pull-requests-limit: 10
 
-  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -18,7 +15,6 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
 
-  # Dockerfile base images
   - package-ecosystem: "docker"
     directory: "/src/ProductionReadyApi.Api"
     schedule:
@@ -26,7 +22,6 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
 
-  # docker-compose.yml
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
@@ -34,7 +29,6 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
 
-  # global.json / .NET SDK
   - package-ecosystem: "dotnet-sdk"
     directory: "/"
     schedule:

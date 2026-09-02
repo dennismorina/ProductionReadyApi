@@ -1,329 +1,326 @@
 # ProductionReadyApi
 
-A compact, production-oriented ASP.NET Core backend sample built with **.NET 10**, **C#**, **PostgreSQL**, **Entity Framework Core**, **Docker**, automated tests and **GitHub Actions CI**.
+[![CI](https://github.com/dennismorina/ProductionReadyApi/actions/workflows/ci.yml/badge.svg)](https://github.com/dennismorina/ProductionReadyApi/actions/workflows/ci.yml)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-The project intentionally stays small enough to understand quickly while demonstrating patterns that matter in real backend systems: layered architecture, validation, error handling, persistence, health checks, OpenAPI, database migrations, integration tests and CI/CD.
+A production-oriented ASP.NET Core REST API demonstrating clean backend architecture,
+PostgreSQL persistence, automated testing, containerization and continuous integration.
 
-## What this repository demonstrates
+The project intentionally uses a small product-management domain so the focus stays on
+engineering practices rather than artificial business complexity.
 
-- ASP.NET Core Web API
-- C# / .NET 10
-- PostgreSQL with Entity Framework Core
-- Layered architecture (`Domain`, `Application`, `Infrastructure`, `Api`)
-- RESTful CRUD endpoints
-- Pagination and search
-- Domain and application validation
-- Global exception handling with RFC 7807 `ProblemDetails`
-- Unique database constraints
-- Database health checks
-- OpenAPI document generation
-- Docker + Docker Compose
-- Unit tests with xUnit.net v3
-- Integration tests with an isolated SQLite database
-- Microsoft Testing Platform (MTP)
-- GitHub Actions build/test pipeline
-- Dependabot configuration
+## Highlights
+
+- ASP.NET Core / .NET 10
+- C#
+- RESTful Product API
+- Layered, Clean Architecture-inspired structure
+- PostgreSQL 17
+- Entity Framework Core
+- EF Core migrations
+- Repository abstraction
+- Application services
+- Domain validation
+- Centralized exception handling with Problem Details
+- Search and pagination
+- Unique SKU enforcement
+- Health checks
+- OpenAPI
+- Scalar API documentation in Development
+- Docker and Docker Compose
+- Unit tests
+- Integration tests
+- Code coverage in CI
+- GitHub Actions
+- Docker image build validation
+- Dependabot
 
 ## Architecture
 
 ```text
-HTTP Client
-    |
-    v
-+---------------------------+
-| ProductionReadyApi.Api    |
-| Controllers / HTTP        |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-| Application               |
-| Use cases / validation    |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-| Domain                    |
-| Business rules / entities |
-+---------------------------+
-              ^
-              |
-+-------------+-------------+
-| Infrastructure            |
-| EF Core / PostgreSQL      |
-+---------------------------+
+┌───────────────────────────────────┐
+│                API                │
+│ Controllers · HTTP · OpenAPI      │
+└────────────────┬──────────────────┘
+                 │
+                 ▼
+┌───────────────────────────────────┐
+│            Application            │
+│ Services · Contracts · DTOs       │
+└────────────────┬──────────────────┘
+                 │
+                 ▼
+┌───────────────────────────────────┐
+│              Domain               │
+│ Entities · Business Rules         │
+└───────────────────────────────────┘
+
+                 ▲
+                 │ IProductRepository
+                 │
+┌────────────────┴──────────────────┐
+│          Infrastructure           │
+│ EF Core · PostgreSQL · Migrations │
+└───────────────────────────────────┘
 ```
 
-Dependency direction:
+The domain and application layers are kept independent from PostgreSQL and Entity
+Framework Core. Infrastructure implements persistence concerns, while the API exposes
+the application through HTTP.
+
+## Project Structure
 
 ```text
-Api ---------> Application ---------> Domain
- |                  ^
- |                  |
- +-> Infrastructure+
-        |
-        +---------------------------> Domain
+ProductionReadyApi
+├── src
+│   ├── ProductionReadyApi.Api
+│   ├── ProductionReadyApi.Application
+│   ├── ProductionReadyApi.Domain
+│   └── ProductionReadyApi.Infrastructure
+├── tests
+│   ├── ProductionReadyApi.UnitTests
+│   └── ProductionReadyApi.IntegrationTests
+├── .github
+│   ├── workflows
+│   │   └── ci.yml
+│   └── dependabot.yml
+├── docker-compose.yml
+├── ProductionReadyApi.sln
+└── README.md
 ```
 
-GitHub also renders the same flow as a Mermaid diagram:
+## API
 
-```mermaid
-flowchart LR
-    Client[HTTP Client] --> Api[API]
-    Api --> Application[Application]
-    Application --> Domain[Domain]
-    Api --> Infrastructure[Infrastructure]
-    Infrastructure --> Application
-    Infrastructure --> Domain
-    Infrastructure --> PostgreSQL[(PostgreSQL)]
+### Products
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/products` | Returns paginated products |
+| `GET` | `/api/products/{id}` | Returns one product |
+| `POST` | `/api/products` | Creates a product |
+| `PUT` | `/api/products/{id}` | Updates a product |
+| `DELETE` | `/api/products/{id}` | Deletes a product |
+
+### Health Checks
+
+| Endpoint | Purpose |
+|---|---|
+| `/health` | Overall application health |
+| `/health/live` | Liveness probe |
+| `/health/ready` | Readiness probe including database connectivity |
+
+## Example Request
+
+```http
+POST /api/products
+Content-Type: application/json
+
+{
+  "sku": "KB-001",
+  "name": "Mechanical Keyboard",
+  "price": 129.90,
+  "stockQuantity": 25
+}
 ```
 
-## Domain
+The API normalizes SKUs and prevents duplicate values. Invalid input returns structured
+HTTP error responses instead of leaking persistence-specific exceptions.
 
-The sample manages products with the following properties:
+## Search and Pagination
+
+```http
+GET /api/products?search=keyboard&page=1&pageSize=20
+```
+
+Pagination prevents unrestricted result sets and represents a common production backend
+pattern.
+
+## Error Handling
+
+The API uses centralized exception handling and standardized Problem Details responses.
+
+Typical status codes include:
+
+- `400 Bad Request`
+- `404 Not Found`
+- `409 Conflict`
+- `500 Internal Server Error`
+
+For example, trying to create two products with the same SKU returns `409 Conflict`.
+
+## Database
+
+PostgreSQL is used as the relational database and Entity Framework Core handles
+persistence and migrations.
+
+The initial migration creates the `products` table and a unique index for the SKU.
+
+Applied EF Core migrations are tracked in:
 
 ```text
-Id
-Sku
-Name
-Price
-StockQuantity
-CreatedAt
-UpdatedAt
+__EFMigrationsHistory
 ```
 
-`Sku` is unique at database level.
+## Run Locally
+
+### Requirements
+
+- .NET 10 SDK
+- Docker Desktop
+
+Start PostgreSQL:
+
+```bash
+docker compose up -d postgres
+```
+
+Run the API:
+
+```bash
+dotnet run --project src/ProductionReadyApi.Api
+```
+
+Default local development endpoints:
+
+```text
+HTTP:       http://localhost:5080
+HTTPS:      https://localhost:7080
+PostgreSQL: localhost:5433
+```
+
+## API Documentation
+
+When the application runs in the `Development` environment, interactive Scalar
+documentation is available at:
+
+```text
+http://localhost:5080/scalar/v1
+```
+
+The OpenAPI document is available at:
+
+```text
+http://localhost:5080/openapi/v1.json
+```
 
 ## Run with Docker
 
-Prerequisite: Docker Desktop or Docker Engine with Compose.
+Build and start the complete environment:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-The API is then available at:
+The environment contains:
 
 ```text
-http://localhost:8080
+Docker Compose
+├── API
+│   └── localhost:8080
+└── PostgreSQL
+    ├── container:5432
+    └── host:5433
 ```
 
-OpenAPI JSON:
+Check readiness:
 
 ```text
-http://localhost:8080/openapi/v1.json
+http://localhost:8080/health/ready
 ```
 
-Health endpoints:
-
-```text
-http://localhost:8080/health       # all checks
-http://localhost:8080/health/live  # process liveness
-http://localhost:8080/health/ready # database readiness
-```
-
-Stop everything:
+Stop the environment:
 
 ```bash
 docker compose down
 ```
 
-Remove the local PostgreSQL volume as well:
+To also remove the PostgreSQL volume:
 
 ```bash
 docker compose down -v
 ```
 
-## Run locally without Docker for the API
+> Warning: `-v` removes the local database data stored in the Docker volume.
 
-Start PostgreSQL first, for example with:
-
-```bash
-docker compose up postgres -d
-```
-
-Then:
-
-```bash
-dotnet restore
-dotnet run --project src/ProductionReadyApi.Api
-```
-
-The default local development connection string is stored in `appsettings.json` and can be overridden with environment variables or user secrets.
-
-## API examples
-
-### Create product
-
-```bash
-curl -X POST http://localhost:8080/api/products \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sku": "KB-001",
-    "name": "Mechanical Keyboard",
-    "price": 129.90,
-    "stockQuantity": 25
-  }'
-```
-
-### Get product
-
-```bash
-curl http://localhost:8080/api/products/{id}
-```
-
-### Search and paginate
-
-```bash
-curl "http://localhost:8080/api/products?search=keyboard&page=1&pageSize=20"
-```
-
-### Update product
-
-```bash
-curl -X PUT http://localhost:8080/api/products/{id} \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sku": "KB-001",
-    "name": "Mechanical Keyboard Pro",
-    "price": 149.90,
-    "stockQuantity": 18
-  }'
-```
-
-### Delete product
-
-```bash
-curl -X DELETE http://localhost:8080/api/products/{id}
-```
-
-## Validation examples
-
-Invalid requests return an RFC 7807 compatible response:
-
-```json
-{
-  "type": "https://httpstatuses.com/400",
-  "title": "Validation failed",
-  "status": 400,
-  "detail": "One or more validation errors occurred.",
-  "errors": {
-    "sku": ["SKU is required."],
-    "price": ["Price must be greater than or equal to 0."]
-  }
-}
-```
-
-Duplicate SKU values return HTTP `409 Conflict`.
-
-## Tests
+## Testing
 
 Run all tests:
 
 ```bash
-dotnet test
+dotnet test --solution ProductionReadyApi.sln --configuration Release
 ```
 
-Run all tests with Cobertura coverage output:
+The solution currently contains unit and integration tests. Integration tests execute
+requests through the ASP.NET Core HTTP pipeline.
 
-```bash
-dotnet test --coverlet --coverlet-output-format cobertura
-```
+## Continuous Integration
 
-The integration tests replace PostgreSQL with a dedicated in-memory SQLite database. This keeps the CI pipeline fast and deterministic while still exercising the full HTTP pipeline, dependency injection, EF Core and endpoint behavior. The test projects use xUnit.net v3 on Microsoft Testing Platform.
-
-## Database migrations
-
-The repository contains an initial EF Core migration and a local `dotnet-ef` tool manifest. Restore repository tools once with:
-
-```bash
-dotnet tool restore
-```
-
-Create another migration:
-
-```bash
-dotnet ef migrations add MyMigration \
-  --project src/ProductionReadyApi.Infrastructure \
-  --startup-project src/ProductionReadyApi.Api
-```
-
-Apply migrations manually:
-
-```bash
-dotnet ef database update \
-  --project src/ProductionReadyApi.Infrastructure \
-  --startup-project src/ProductionReadyApi.Api
-```
-
-For this portfolio repository the API can apply migrations at startup. In larger production environments, migrations are commonly executed as a separate deployment step.
-
-## CI/CD
-
-`.github/workflows/ci.yml` runs on pushes and pull requests:
+Every push and pull request targeting `main` runs the GitHub Actions CI workflow:
 
 ```text
 Restore
-  -> Build
-  -> Unit tests
-  -> Integration tests
-  -> Coverlet code coverage
+   ↓
+Release Build
+   ↓
+Unit & Integration Tests
+   ↓
+Code Coverage
+   ↓
+Docker Image Build
 ```
 
-Dependabot checks NuGet packages and Docker dependencies weekly.
+A change must compile, pass the automated tests and produce a valid Docker image before
+the workflow succeeds.
 
-## Project structure
+## Dependency Management
 
-```text
-ProductionReadyApi/
-├─ .github/
-│  ├─ dependabot.yml
-│  └─ workflows/
-│     └─ ci.yml
-├─ src/
-│  ├─ ProductionReadyApi.Api/
-│  ├─ ProductionReadyApi.Application/
-│  ├─ ProductionReadyApi.Domain/
-│  └─ ProductionReadyApi.Infrastructure/
-├─ tests/
-│  ├─ ProductionReadyApi.IntegrationTests/
-│  └─ ProductionReadyApi.UnitTests/
-├─ docker-compose.yml
-├─ Directory.Build.props
-└─ ProductionReadyApi.sln
-```
+Dependabot checks dependencies regularly and can create pull requests for updates to:
 
-## Design decisions
+- NuGet packages
+- GitHub Actions
+- Docker images
+- Docker Compose images
+- .NET SDK versions
 
-### No framework-heavy mediator abstraction
+Dependabot pull requests run through the same CI checks as normal changes.
 
-The project uses explicit application services instead of adding a mediator package just to demonstrate a pattern. The goal is clear dependency flow and testability with minimal accidental complexity.
+## Technology Stack
 
-### Validation in the application layer
+| Area | Technology |
+|---|---|
+| Language | C# |
+| Runtime | .NET 10 |
+| API | ASP.NET Core |
+| Database | PostgreSQL 17 |
+| ORM | Entity Framework Core |
+| API Documentation | OpenAPI / Scalar |
+| Testing | xUnit |
+| Coverage | Coverlet |
+| Containers | Docker / Docker Compose |
+| CI | GitHub Actions |
+| Dependency Updates | Dependabot |
 
-Validation is independent from ASP.NET Core. The same use cases can therefore be invoked from another adapter without duplicating business rules.
+## Design Goals
 
-### Database constraints remain authoritative
+This repository demonstrates several practices used in maintainable backend systems:
 
-Application checks provide good error messages, while the unique PostgreSQL index on `Sku` protects data integrity under concurrent requests.
+- clear separation of concerns
+- dependency inversion
+- persistence abstraction
+- explicit domain rules
+- standardized API errors
+- database migrations
+- automated testing
+- reproducible local environments
+- continuous integration
+- automated dependency maintenance
 
-### ProblemDetails for predictable API errors
-
-Known application exceptions are converted centrally into consistent HTTP responses. Unexpected exceptions are logged and returned as generic HTTP 500 responses without leaking internal details.
-
-## Possible extensions
-
-Good next steps if you want to extend the repository:
-
-- JWT authentication and role-based authorization
-- Redis caching
-- OpenTelemetry traces and metrics
-- Rate limiting
-- API versioning
-- Testcontainers with a real PostgreSQL instance
-- Outbox pattern and message broker
-- Deployment pipeline to Azure, AWS or another container platform
+The project deliberately stays small enough that its architecture can be understood
+without navigating a large artificial domain.
 
 ## License
 
-MIT
+This project is licensed under the MIT License.
